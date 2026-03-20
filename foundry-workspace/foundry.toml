@@ -8,5 +8,9 @@ cache_path = "cache"
 # All exploit tests fork mainnet — set MAINNET_RPC_URL in your .env
 # fork_block_number can be overridden per test via --fork-block-number
 
+remappings = [
+    "forge-std/=lib/forge-std/src/",
+]
+
 [rpc_endpoints]
 mainnet = "${MAINNET_RPC_URL}"

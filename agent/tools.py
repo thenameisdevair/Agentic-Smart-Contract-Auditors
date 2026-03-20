@@ -142,17 +142,27 @@ def run_forge_test(
             "(e.g. ~/aismartcontractagent/DeFiHackLabs)."
         )
 
-    # Resolve test file relative to foundry root if not absolute
+    # Resolve test file — try multiple strategies in order:
+    # 1. As given (absolute, or relative to foundry root)
+    # 2. Prepend "/" in case the model dropped the leading slash
+    # 3. Relative to REPO_ROOT (challenge workspace files)
     tf = Path(test_file)
     if not tf.is_absolute():
         tf = foundry_root / test_file
 
     if not tf.exists():
-        # The agent may have written the file to the challenge workspace
-        # (under REPO_ROOT) rather than inside FOUNDRY_ROOT.  Try resolving
-        # relative to REPO_ROOT and, if found, copy it into foundry's test/
-        # directory so forge can compile it within its project context.
+        # Strategy 2: model may have passed "home/user/..." instead of "/home/user/..."
+        with_slash = Path("/" + test_file)
+        if with_slash.exists():
+            tf = with_slash
+
+    if not tf.exists():
+        # Strategy 3: written to challenge workspace under REPO_ROOT — copy into
+        # foundry's test/ directory so forge can compile it in project context.
         alt = _resolve_path(test_file)
+        # Also try with leading slash stripped for the REPO_ROOT lookup
+        if not alt.exists() and test_file.startswith("/"):
+            alt = _resolve_path(test_file.lstrip("/"))
         if alt.exists():
             dest = foundry_root / "test" / alt.name
             dest.parent.mkdir(parents=True, exist_ok=True)
@@ -160,6 +170,15 @@ def run_forge_test(
             tf = dest
         else:
             return f"ERROR: Test file not found: {tf}"
+
+    # If the file is outside foundry_root, copy it in so forge can compile it.
+    try:
+        tf.relative_to(foundry_root)
+    except ValueError:
+        dest = foundry_root / "test" / tf.name
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(tf, dest)
+        tf = dest
 
     cmd = [
         "forge", "test",
