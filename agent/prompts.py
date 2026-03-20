@@ -25,7 +25,8 @@ Step 2 — FORM a hypothesis.
   - Economic attacks (price manipulation, share inflation, liquidation paths)
 
 Step 3 — WRITE a Foundry test.
-  Use write_file to create a .t.sol file in the workspace directory.
+  Use write_file to create a .t.sol file. Use the full workspace path from the challenge
+  (e.g. 'challenges/bybit_blind_001/workspace/ExploitTest.t.sol').
   The test must:
   - Use `forge-std/Test.sol` and `vm.createSelectFork`
   - Set up the forked state to match attack preconditions
@@ -34,7 +35,8 @@ Step 3 — WRITE a Foundry test.
   Keep the test minimal — focus on confirming the hypothesis, not perfection.
 
 Step 4 — RUN the test.
-  Use run_forge_test to execute your test file.
+  Use run_forge_test with the EXACT path returned in the write_file success message.
+  Do not invent or shorten the path — use it verbatim.
   Observe the result: pass, fail, revert reason, logs, traces.
 
 Step 5 — REVISE.
@@ -133,13 +135,13 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "write_file",
-            "description": "Write content to a file in the challenge workspace directory. Use this to create or update Foundry test files (.t.sol). Files must be written to the workspace path provided in the challenge.",
+            "description": "Write content to a file in the challenge workspace directory. Use this to create or update Foundry test files (.t.sol). The success response will include the exact path to pass to run_forge_test.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "path": {
                         "type": "string",
-                        "description": "File path within the workspace directory. Example: 'workspace/ExploitTest.t.sol'",
+                        "description": "Absolute path or path relative to the repo root. Always use the full workspace path provided in the challenge. Example: 'challenges/bybit_blind_001/workspace/ExploitTest.t.sol'",
                     },
                     "content": {
                         "type": "string",
@@ -160,7 +162,7 @@ TOOL_DEFINITIONS = [
                 "properties": {
                     "test_file": {
                         "type": "string",
-                        "description": "Path to the .t.sol test file, relative to the Foundry project root.",
+                        "description": "Path to the .t.sol test file. Use the exact path returned by write_file (e.g. 'challenges/bybit_blind_001/workspace/ExploitTest.t.sol').",
                     },
                     "fork_block": {
                         "type": "integer",

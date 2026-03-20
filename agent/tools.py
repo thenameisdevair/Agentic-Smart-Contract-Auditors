@@ -119,7 +119,11 @@ def write_file(path: str, content: str, challenge: dict) -> str:
     try:
         resolved.parent.mkdir(parents=True, exist_ok=True)
         resolved.write_text(content, encoding="utf-8")
-        return f"OK: Written {len(content)} chars to {resolved}"
+        rel = resolved.relative_to(config.REPO_ROOT)
+        return (
+            f"OK: Written {len(content)} chars to {resolved}\n"
+            f"To run this test use: run_forge_test(test_file='{rel}')"
+        )
     except Exception as e:
         return f"ERROR writing file: {e}"
 
