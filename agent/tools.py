@@ -222,22 +222,23 @@ def fetch_contract_source(address: str, chain: str = "mainnet") -> str:
             "Add ETHERSCAN_API_KEY to your .env to fetch contract source."
         )
 
-    base_urls = {
-        "mainnet": "https://api.etherscan.io/api",
-        "arbitrum": "https://api.arbiscan.io/api",
-        "optimism": "https://api-optimistic.etherscan.io/api",
-        "base": "https://api.basescan.org/api",
-        "polygon": "https://api.polygonscan.com/api",
+    chain_ids = {
+        "mainnet": 1,
+        "arbitrum": 42161,
+        "optimism": 10,
+        "base": 8453,
+        "polygon": 137,
     }
-    api_url = base_urls.get(chain, base_urls["mainnet"])
+    chain_id = chain_ids.get(chain, 1)
 
     params = urllib.parse.urlencode({
+        "chainid": chain_id,
         "module": "contract",
         "action": "getsourcecode",
         "address": address,
         "apikey": api_key,
     })
-    url = f"{api_url}?{params}"
+    url = f"https://api.etherscan.io/v2/api?{params}"
 
     try:
         with urllib.request.urlopen(url, timeout=15) as resp:
