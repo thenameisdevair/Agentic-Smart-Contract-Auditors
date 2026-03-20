@@ -77,6 +77,27 @@ TOOL_DEFINITIONS = [
     {
         "type": "function",
         "function": {
+            "name": "fetch_contract_source",
+            "description": "Fetch the verified Solidity source code of a deployed contract from Etherscan by address. Use this as your FIRST action to inspect the real onchain contracts before forming hypotheses.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "address": {
+                        "type": "string",
+                        "description": "The contract address to fetch source for, e.g. '0x1db92e2eebc8e0c075a02bea49a2935bcd2dfcf4'",
+                    },
+                    "chain": {
+                        "type": "string",
+                        "description": "Chain name: mainnet, arbitrum, optimism, base, polygon. Default: mainnet",
+                    },
+                },
+                "required": ["address"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "read_file",
             "description": "Read the contents of a file by path. Use this to inspect Solidity contracts, interfaces, configs, or test files.",
             "parameters": {
@@ -167,13 +188,26 @@ def build_initial_message(challenge: dict) -> str:
         "",
         f"Goal: {challenge['goal']}",
         "",
-        "Visible files you may read:",
     ]
-    for f in challenge.get("visible_files", []):
-        lines.append(f"  - {f}")
-    lines += [
-        "",
-        "Start by reading the visible files to understand the system, then begin your analysis.",
-        "Remember: a finding is only valid if your Foundry test passes.",
-    ]
+
+    # Target contracts (fetch from chain)
+    target_contracts = challenge.get("target_contracts", [])
+    if target_contracts:
+        lines.append("Target contracts — fetch their source using fetch_contract_source:")
+        for c in target_contracts:
+            lines.append(f"  - {c['address']}  ({c.get('label', '')})")
+        lines += [
+            "",
+            "Start by calling fetch_contract_source on each target contract to read the real onchain code.",
+        ]
+    elif challenge.get("visible_files"):
+        lines.append("Visible files you may read:")
+        for f in challenge.get("visible_files", []):
+            lines.append(f"  - {f}")
+        lines += [
+            "",
+            "Start by reading the visible files to understand the system.",
+        ]
+
+    lines.append("Remember: a finding is only valid if your Foundry test passes.")
     return "\n".join(lines)

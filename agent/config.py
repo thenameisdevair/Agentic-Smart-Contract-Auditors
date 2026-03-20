@@ -7,6 +7,7 @@ load_dotenv()
 # API keys
 OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
 MAINNET_RPC_URL: str = os.getenv("MAINNET_RPC_URL", "")
+ETHERSCAN_API_KEY: str = os.getenv("ETHERSCAN_API_KEY", "")
 
 # Model settings
 DEFAULT_MODEL: str = os.getenv("MODEL", "gpt-4o")

@@ -7,6 +7,8 @@ arguments and returns a string result that goes back into the conversation.
 
 import json
 import subprocess
+import urllib.request
+import urllib.parse
 from pathlib import Path
 
 import agent.config as config
@@ -186,6 +188,86 @@ def run_forge_test(
 
 
 # ---------------------------------------------------------------------------
+# Onchain contract source fetching
+# ---------------------------------------------------------------------------
+
+def fetch_contract_source(address: str, chain: str = "mainnet") -> str:
+    """
+    Fetch verified Solidity source code for a deployed contract.
+
+    Tries cast etherscan-source first. Falls back to direct Etherscan API call.
+    Returns the source as a string, capped at 20k chars.
+    """
+    address = address.strip()
+    api_key = config.ETHERSCAN_API_KEY
+
+    # --- Try cast etherscan-source first ---
+    try:
+        cmd = ["cast", "etherscan-source", address, "--chain", chain]
+        if api_key:
+            cmd += ["--etherscan-api-key", api_key]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        output = (result.stdout or "").strip()
+        if output and result.returncode == 0:
+            if len(output) > 20_000:
+                output = output[:20_000] + "\n\n[... TRUNCATED]"
+            return output
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass  # cast not available or timed out, fall through to API
+
+    # --- Fallback: Etherscan API ---
+    if not api_key:
+        return (
+            "ERROR: cast etherscan-source failed and no ETHERSCAN_API_KEY is set. "
+            "Add ETHERSCAN_API_KEY to your .env to fetch contract source."
+        )
+
+    base_urls = {
+        "mainnet": "https://api.etherscan.io/api",
+        "arbitrum": "https://api.arbiscan.io/api",
+        "optimism": "https://api-optimistic.etherscan.io/api",
+        "base": "https://api.basescan.org/api",
+        "polygon": "https://api.polygonscan.com/api",
+    }
+    api_url = base_urls.get(chain, base_urls["mainnet"])
+
+    params = urllib.parse.urlencode({
+        "module": "contract",
+        "action": "getsourcecode",
+        "address": address,
+        "apikey": api_key,
+    })
+    url = f"{api_url}?{params}"
+
+    try:
+        with urllib.request.urlopen(url, timeout=15) as resp:
+            data = json.loads(resp.read().decode())
+
+        if data.get("status") != "1" or not data.get("result"):
+            return f"ERROR: Etherscan API returned no source for {address}: {data.get('message', 'unknown error')}"
+
+        result = data["result"][0]
+        source = result.get("SourceCode", "")
+        contract_name = result.get("ContractName", "Unknown")
+        compiler = result.get("CompilerVersion", "unknown")
+
+        if not source:
+            return f"ERROR: Contract {address} is not verified on Etherscan."
+
+        # SourceCode may be JSON-encoded multi-file source
+        header = f"// Contract: {contract_name}\n// Compiler: {compiler}\n// Address: {address}\n\n"
+        full = header + source
+
+        if len(full) > 20_000:
+            full = full[:20_000] + "\n\n[... TRUNCATED — use read_file on saved files for full source]"
+
+        return full
+
+    except Exception as e:
+        return f"ERROR fetching contract source from Etherscan: {e}"
+
+
+# ---------------------------------------------------------------------------
 # Dispatcher
 # ---------------------------------------------------------------------------
 
@@ -198,6 +280,11 @@ def dispatch(tool_name: str, args: dict, challenge: dict) -> str:
             return list_files(args["directory"], challenge)
         elif tool_name == "write_file":
             return write_file(args["path"], args["content"], challenge)
+        elif tool_name == "fetch_contract_source":
+            return fetch_contract_source(
+                args["address"],
+                chain=args.get("chain", "mainnet"),
+            )
         elif tool_name == "run_forge_test":
             return run_forge_test(
                 args["test_file"],
