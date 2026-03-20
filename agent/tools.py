@@ -6,6 +6,7 @@ arguments and returns a string result that goes back into the conversation.
 """
 
 import json
+import shutil
 import subprocess
 import urllib.request
 import urllib.parse
@@ -147,7 +148,18 @@ def run_forge_test(
         tf = foundry_root / test_file
 
     if not tf.exists():
-        return f"ERROR: Test file not found: {tf}"
+        # The agent may have written the file to the challenge workspace
+        # (under REPO_ROOT) rather than inside FOUNDRY_ROOT.  Try resolving
+        # relative to REPO_ROOT and, if found, copy it into foundry's test/
+        # directory so forge can compile it within its project context.
+        alt = _resolve_path(test_file)
+        if alt.exists():
+            dest = foundry_root / "test" / alt.name
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(alt, dest)
+            tf = dest
+        else:
+            return f"ERROR: Test file not found: {tf}"
 
     cmd = [
         "forge", "test",
