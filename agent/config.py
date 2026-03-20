@@ -21,8 +21,12 @@ TRAJECTORIES_DIR = REPO_ROOT / "trajectories"
 RESULTS_DIR = REPO_ROOT / "results"
 
 # Path to a local Foundry project root (where forge is run from).
-# Point this at your DeFiHackLabs clone or any Foundry project.
-FOUNDRY_ROOT: Path = Path(os.getenv("FOUNDRY_ROOT", str(REPO_ROOT)))
+# Relative paths are resolved relative to REPO_ROOT.
+_foundry_raw = os.getenv("FOUNDRY_ROOT", "foundry-workspace")
+FOUNDRY_ROOT: Path = (
+    Path(_foundry_raw) if Path(_foundry_raw).is_absolute()
+    else REPO_ROOT / _foundry_raw
+)
 
 
 def validate() -> None:
