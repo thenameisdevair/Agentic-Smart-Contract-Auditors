@@ -1,0 +1,22 @@
+# Secrets
+.env
+
+# Agent outputs (not committed — these are generated)
+trajectories/*.json
+results/*.json
+challenges/*/workspace/*.sol
+challenges/*/workspace/*.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Editor
+.vscode/
+.idea/
+*.swp
